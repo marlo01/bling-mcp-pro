@@ -1,6 +1,6 @@
 {
   "name": "bling-mcp-pro",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Servidor MCP open source para integração segura com a API do Bling ERP. Fork hardened do bling-mcp original com logs sanitizados, rate limiting, validação reforçada e suporte HTTP/SSE.",
   "type": "module",
   "main": "dist/index.js",

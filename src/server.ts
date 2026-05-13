@@ -41,7 +41,7 @@ function authenticateRequest(request: MinimalRequest): void {
 
 const mcpOptions: Record<string, unknown> = {
   name: 'Bling MCP Pro',
-  version: '2.0.0',
+  version: '2.1.0',
 };
 
 if (config.mcpTransport === 'sse' || config.mcpTransport === 'http') {

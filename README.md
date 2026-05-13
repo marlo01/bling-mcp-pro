@@ -121,18 +121,55 @@ Adicione ao seu `claude_desktop_config.json`:
 
 ### Claude Web / Remoto (modo HTTP/SSE)
 
-Para usar como Custom Connector remoto:
+Para usar como Custom Connector remoto, o servidor agora **exige autenticação Bearer obrigatória** (desde `v2.1.0`).
+
+#### 1. Gere um token forte (mínimo 32 caracteres)
+
+```bash
+# Linux / macOS
+openssl rand -hex 32
+
+# Windows (PowerShell)
+-join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
+
+# Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+#### 2. Configure as variáveis de ambiente
 
 ```bash
 # No seu servidor (VPS, Docker, etc.)
-MCP_TRANSPORT=sse MCP_PORT=4545 npm start
+export BLING_TOKEN=seu_token_bling
+export MCP_TRANSPORT=sse
+export MCP_PORT=4545
+export MCP_AUTH_TOKEN=cole_o_token_gerado_acima
+npm start
 ```
 
-Depois adicione no Claude: **Settings → Connectors → Add custom connector**
+> Sem `MCP_AUTH_TOKEN` (ou com menos de 32 caracteres) o servidor **recusa iniciar** em modo de rede.
 
-URL: `https://seu-servidor.com/sse`
+#### 3. Configure o proxy reverso com HTTPS
 
-> ⚠️ **Importante:** Sempre coloque atrás de um proxy reverso com HTTPS (Nginx/Caddy/Traefik).
+Sempre coloque atrás de Nginx/Caddy/Traefik com TLS — o `MCP_AUTH_TOKEN` viaja no header e precisa de criptografia em trânsito.
+
+#### 4. Adicione no Claude
+
+**Settings → Connectors → Add custom connector**
+
+- URL: `https://seu-servidor.com/sse`
+- Header: `Authorization: Bearer cole_o_token_gerado_acima`
+
+Em ferramentas que enviem o header automaticamente (curl, fetch, etc.) o formato é:
+
+```bash
+curl -H "Authorization: Bearer SEU_MCP_AUTH_TOKEN" https://seu-servidor.com/sse
+```
+
+> ⚠️ **Importante:**
+> - Nunca commite `MCP_AUTH_TOKEN` no Git.
+> - Rotacione o token periodicamente (mensalmente).
+> - Use um valor diferente de `BLING_TOKEN` — eles têm propósitos distintos.
 
 ---
 
