@@ -1,8 +1,6 @@
 import { logger } from '../../utils/logger.js';
-import { blingClient, renovarToken } from '../blingClient.js';
-import axios from 'axios';
+import { blingClient, withTokenRefresh } from '../blingClient.js';
 
-// Interface baseada no schema FormasPagamentosDadosBaseDTO
 export interface FormaPagamento {
   id?: number;
   descricao: string;
@@ -22,80 +20,48 @@ export interface ListarFormasPagamentosParams {
   finalidade?: number;
 }
 
-/**
- * Lista as formas de pagamento cadastradas no Bling
- */
-export async function listarFormasPagamentos(params?: ListarFormasPagamentosParams): Promise<FormaPagamento[]> {
-  try {
-    logger.debug('Listando formas de pagamento', params);
+export async function listarFormasPagamentos(
+  params?: ListarFormasPagamentosParams,
+): Promise<FormaPagamento[]> {
+  logger.debug('Listando formas de pagamento', { params });
+  return withTokenRefresh(async () => {
     const response = await blingClient.get('/formas-pagamentos', { params });
     return response.data.data as FormaPagamento[];
-  } catch (error) {
-    return handleApiError(error, 'listarFormasPagamentos', params);
-  }
+  }, 'listarFormasPagamentos');
 }
 
-/**
- * Obtém uma forma de pagamento pelo ID
- */
 export async function obterFormaPagamento(id: number | string): Promise<FormaPagamento> {
-  try {
-    logger.debug('Obtendo forma de pagamento', id);
+  logger.debug('Obtendo forma de pagamento', { id });
+  return withTokenRefresh(async () => {
     const response = await blingClient.get(`/formas-pagamentos/${id}`);
     return response.data.data as FormaPagamento;
-  } catch (error) {
-    return handleApiError(error, 'obterFormaPagamento', { id });
-  }
+  }, 'obterFormaPagamento');
 }
 
-/**
- * Cria uma nova forma de pagamento
- */
-export async function criarFormaPagamento(forma: Omit<FormaPagamento, 'id' | 'fixa'>): Promise<FormaPagamento> {
-  try {
-    logger.debug('Criando forma de pagamento', forma);
+export async function criarFormaPagamento(
+  forma: Omit<FormaPagamento, 'id' | 'fixa'>,
+): Promise<FormaPagamento> {
+  logger.debug('Criando forma de pagamento', { forma });
+  return withTokenRefresh(async () => {
     const response = await blingClient.post('/formas-pagamentos', forma);
     return response.data.data as FormaPagamento;
-  } catch (error) {
-    return handleApiError(error, 'criarFormaPagamento', forma);
-  }
+  }, 'criarFormaPagamento');
 }
 
-/**
- * Atualiza uma forma de pagamento existente
- */
-export async function atualizarFormaPagamento(id: number | string, forma: Partial<FormaPagamento>): Promise<FormaPagamento> {
-  try {
-    logger.debug('Atualizando forma de pagamento', id, forma);
+export async function atualizarFormaPagamento(
+  id: number | string,
+  forma: Partial<FormaPagamento>,
+): Promise<FormaPagamento> {
+  logger.debug('Atualizando forma de pagamento', { id, forma });
+  return withTokenRefresh(async () => {
     const response = await blingClient.put(`/formas-pagamentos/${id}`, forma);
     return response.data.data as FormaPagamento;
-  } catch (error) {
-    return handleApiError(error, 'atualizarFormaPagamento', { id, forma });
-  }
+  }, 'atualizarFormaPagamento');
 }
 
-/**
- * Remove uma forma de pagamento pelo ID
- */
 export async function excluirFormaPagamento(id: number | string): Promise<void> {
-  try {
-    logger.debug('Excluindo forma de pagamento', id);
+  logger.debug('Excluindo forma de pagamento', { id });
+  await withTokenRefresh(async () => {
     await blingClient.delete(`/formas-pagamentos/${id}`);
-    logger.debug('Forma de pagamento excluída com sucesso');
-  } catch (error) {
-    return handleApiError(error, 'excluirFormaPagamento', { id });
-  }
+  }, 'excluirFormaPagamento');
 }
-
-// Tratamento centralizado de erro e renovação de token
-async function handleApiError(error: unknown, funcName: string, params: any): Promise<any> {
-  if (axios.isAxiosError(error) && error.response?.status === 401) {
-    await renovarToken();
-    if (funcName === 'listarFormasPagamentos') return listarFormasPagamentos(params);
-    if (funcName === 'obterFormaPagamento') return obterFormaPagamento(params.id);
-    if (funcName === 'criarFormaPagamento') return criarFormaPagamento(params);
-    if (funcName === 'atualizarFormaPagamento') return atualizarFormaPagamento(params.id, params.forma);
-    if (funcName === 'excluirFormaPagamento') return excluirFormaPagamento(params.id);
-  }
-  throw error;
-} 

@@ -1,10 +1,6 @@
 import { logger } from '../../utils/logger.js';
-import { blingClient, renovarToken } from '../blingClient.js';
-import axios from 'axios';
+import { blingClient, withTokenRefresh } from '../blingClient.js';
 
-/**
- * Interfaces para Produto (baseado no schema ProdutosDadosDTO)
- */
 export interface Produto {
   id?: number;
   nome: string;
@@ -72,12 +68,9 @@ export interface ProdutosResponse {
   };
 }
 
-/**
- * Lista os produtos cadastrados no Bling
- */
 export async function listarProdutos(params?: ListarProdutosParams): Promise<ProdutosResponse> {
-  try {
-    logger.debug('Listando produtos', params);
+  logger.debug('Listando produtos', { params });
+  return withTokenRefresh(async () => {
     const response = await blingClient.get('/produtos', { params });
     if (response.data && Array.isArray(response.data.data)) {
       return {
@@ -86,135 +79,57 @@ export async function listarProdutos(params?: ListarProdutosParams): Promise<Pro
           page: response.data.page || 1,
           totalPages: response.data.totalPages || 1,
           totalItems: response.data.data.length,
-          limit: response.data.limit || response.data.data.length
-        }
+          limit: response.data.limit || response.data.data.length,
+        },
       };
     }
     if (Array.isArray(response.data)) {
       return {
         data: response.data,
-        pagination: {
-          page: 1,
-          totalPages: 1,
-          totalItems: response.data.length,
-          limit: 50
-        }
+        pagination: { page: 1, totalPages: 1, totalItems: response.data.length, limit: 50 },
       };
     }
-    return {
-      data: Array.isArray(response.data) ? response.data : (response.data && Array.isArray(response.data.data)) ? response.data.data : [],
-      pagination: {
-        page: 1,
-        totalPages: 1,
-        totalItems: Array.isArray(response.data) ? response.data.length : (response.data && Array.isArray(response.data.data)) ? response.data.data.length : 0,
-        limit: 50
-      }
-    };
-  } catch (error) {
-    return handleApiError(error, 'listarProdutos', params);
-  }
+    return { data: [], pagination: { page: 1, totalPages: 1, totalItems: 0, limit: 50 } };
+  }, 'listarProdutos');
 }
 
-/**
- * Obtém um produto pelo ID
- */
 export async function obterProduto(id: number | string): Promise<Produto> {
-  try {
-    logger.debug('Obtendo produto', id);
+  logger.debug('Obtendo produto', { id });
+  return withTokenRefresh(async () => {
     const response = await blingClient.get(`/produtos/${id}`);
-    if (response.data && response.data.data) {
-      return response.data.data as Produto;
-    }
-    return response.data as Produto;
-  } catch (error) {
-    return handleApiError(error, 'obterProduto', { id });
-  }
+    return (response.data?.data ?? response.data) as Produto;
+  }, 'obterProduto');
 }
 
-/**
- * Cria um novo produto
- */
 export async function criarProduto(produto: Produto): Promise<Produto> {
-  try {
-    logger.debug('Criando produto', produto);
+  logger.debug('Criando produto', { produto });
+  return withTokenRefresh(async () => {
     const response = await blingClient.post('/produtos', produto);
-    if (response.data && response.data.data) {
-      return response.data.data as Produto;
-    }
-    return response.data as Produto;
-  } catch (error) {
-    return handleApiError(error, 'criarProduto', produto);
-  }
+    return (response.data?.data ?? response.data) as Produto;
+  }, 'criarProduto');
 }
 
-/**
- * Atualiza um produto existente
- */
-export async function atualizarProduto(id: number | string, produto: Partial<Produto>): Promise<Produto> {
-  try {
-    logger.debug('Atualizando produto', id, produto);
+export async function atualizarProduto(
+  id: number | string,
+  produto: Partial<Produto>,
+): Promise<Produto> {
+  logger.debug('Atualizando produto', { id, produto });
+  return withTokenRefresh(async () => {
     const response = await blingClient.put(`/produtos/${id}`, produto);
-    if (response.data && response.data.data) {
-      return response.data.data as Produto;
-    }
-    return response.data as Produto;
-  } catch (error) {
-    return handleApiError(error, 'atualizarProduto', { id, produto });
-  }
+    return (response.data?.data ?? response.data) as Produto;
+  }, 'atualizarProduto');
 }
 
-/**
- * Remove um produto pelo ID
- */
 export async function excluirProduto(id: number | string): Promise<void> {
-  try {
-    logger.debug('Excluindo produto', id);
+  logger.debug('Excluindo produto', { id });
+  await withTokenRefresh(async () => {
     await blingClient.delete(`/produtos/${id}`);
-    logger.debug('Produto excluído com sucesso');
-  } catch (error) {
-    return handleApiError(error, 'excluirProduto', { id });
-  }
+  }, 'excluirProduto');
 }
 
-/**
- * Remove múltiplos produtos pelos IDs
- */
 export async function excluirProdutos(idsProdutos: number[]): Promise<void> {
-  try {
-    logger.debug('Excluindo múltiplos produtos', idsProdutos);
+  logger.debug('Excluindo múltiplos produtos', { idsProdutos });
+  await withTokenRefresh(async () => {
     await blingClient.delete('/produtos', { params: { idsProdutos } });
-    logger.debug('Produtos excluídos com sucesso');
-  } catch (error) {
-    return handleApiError(error, 'excluirProdutos', { idsProdutos });
-  }
+  }, 'excluirProdutos');
 }
-
-/**
- * Função auxiliar para tratamento de erros da API
- */
-async function handleApiError(error: unknown, funcName: string, params: any): Promise<any> {
-  if (axios.isAxiosError(error) && error.response?.status === 401) {
-    logger.debug(`Token expirado (401) em ${funcName}, tentando renovar...`);
-    try {
-      await renovarToken();
-      if (funcName === 'listarProdutos') return listarProdutos(params as ListarProdutosParams);
-      if (funcName === 'obterProduto') return obterProduto(params.id);
-      if (funcName === 'criarProduto') return criarProduto(params);
-      if (funcName === 'atualizarProduto') return atualizarProduto(params.id, params.produto);
-      if (funcName === 'excluirProduto') return excluirProduto(params.id);
-      if (funcName === 'excluirProdutos') return excluirProdutos(params.idsProdutos);
-      throw new Error(`Função desconhecida: ${funcName}`);
-    } catch (renewError) {
-      logger.error(`Erro ao renovar token em ${funcName}:`, renewError);
-      throw new Error(`Falha na renovação do token: ${renewError instanceof Error ? renewError.message : 'Erro desconhecido'}`);
-    }
-  }
-  if (axios.isAxiosError(error)) {
-    logger.error(`Erro em ${funcName}:`);
-    logger.error('Status:', error.response?.status);
-    logger.error('Data:', JSON.stringify(error.response?.data, null, 2));
-    throw new Error(`Erro ao ${funcName}: ${error.response?.data?.message || error.message}`);
-  }
-  logger.error(`Erro não relacionado ao Axios em ${funcName}:`, error);
-  throw error;
-} 

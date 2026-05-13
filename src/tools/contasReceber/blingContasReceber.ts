@@ -1,10 +1,6 @@
 import { logger } from '../../utils/logger.js';
-import { blingClient, renovarToken } from '../blingClient.js';
-import axios from 'axios';
+import { blingClient, withTokenRefresh } from '../blingClient.js';
 
-/**
- * Interface para Conta a Receber (baseada no schema da API)
- */
 export interface ContaReceber {
   id?: number;
   situacao: number;
@@ -47,128 +43,62 @@ export interface ListarContasReceberParams {
   boletoGerado?: number;
 }
 
-/**
- * Lista as contas a receber
- */
-export async function listarContasReceber(params?: ListarContasReceberParams): Promise<{ data: ContaReceber[]; pagination: any }> {
-  try {
-    logger.debug('Listando contas a receber', params);
+export async function listarContasReceber(
+  params?: ListarContasReceberParams,
+): Promise<{ data: ContaReceber[]; pagination: any }> {
+  logger.debug('Listando contas a receber', { params });
+  return withTokenRefresh(async () => {
     const response = await blingClient.get('/contas/receber', { params });
     return {
       data: response.data.data as ContaReceber[],
       pagination: {
-        // Adapte conforme resposta real da API
         page: response.data.page || 1,
         totalPages: response.data.totalPages || 1,
         totalItems: response.data.data?.length || 0,
-        limit: response.data.limit || response.data.data?.length || 0
-      }
+        limit: response.data.limit || response.data.data?.length || 0,
+      },
     };
-  } catch (error) {
-    return handleApiError(error, 'listarContasReceber', params);
-  }
+  }, 'listarContasReceber');
 }
 
-/**
- * Obtém uma conta a receber pelo ID
- */
 export async function obterContaReceber(id: number | string): Promise<ContaReceber> {
-  try {
-    logger.debug('Obtendo conta a receber', id);
+  logger.debug('Obtendo conta a receber', { id });
+  return withTokenRefresh(async () => {
     const response = await blingClient.get(`/contas/receber/${id}`);
-    if (response.data && response.data.data) {
-      return response.data.data as ContaReceber;
-    }
-    return response.data as ContaReceber;
-  } catch (error) {
-    return handleApiError(error, 'obterContaReceber', { id });
-  }
+    return (response.data?.data ?? response.data) as ContaReceber;
+  }, 'obterContaReceber');
 }
 
-/**
- * Cria uma nova conta a receber
- */
 export async function criarContaReceber(conta: ContaReceber): Promise<ContaReceber> {
-  try {
-    logger.debug('Criando conta a receber', conta);
+  logger.debug('Criando conta a receber', { conta });
+  return withTokenRefresh(async () => {
     const response = await blingClient.post('/contas/receber', conta);
-    if (response.data && response.data.data) {
-      return response.data.data as ContaReceber;
-    }
-    return response.data as ContaReceber;
-  } catch (error) {
-    return handleApiError(error, 'criarContaReceber', conta);
-  }
+    return (response.data?.data ?? response.data) as ContaReceber;
+  }, 'criarContaReceber');
 }
 
-/**
- * Atualiza uma conta a receber existente
- */
-export async function atualizarContaReceber(id: number | string, conta: Partial<ContaReceber>): Promise<ContaReceber> {
-  try {
-    logger.debug('Atualizando conta a receber', id, conta);
+export async function atualizarContaReceber(
+  id: number | string,
+  conta: Partial<ContaReceber>,
+): Promise<ContaReceber> {
+  logger.debug('Atualizando conta a receber', { id, conta });
+  return withTokenRefresh(async () => {
     const response = await blingClient.put(`/contas/receber/${id}`, conta);
-    if (response.data && response.data.data) {
-      return response.data.data as ContaReceber;
-    }
-    return response.data as ContaReceber;
-  } catch (error) {
-    return handleApiError(error, 'atualizarContaReceber', { id, conta });
-  }
+    return (response.data?.data ?? response.data) as ContaReceber;
+  }, 'atualizarContaReceber');
 }
 
-/**
- * Remove uma conta a receber pelo ID
- */
 export async function excluirContaReceber(id: number | string): Promise<void> {
-  try {
-    logger.debug('Excluindo conta a receber', id);
+  logger.debug('Excluindo conta a receber', { id });
+  await withTokenRefresh(async () => {
     await blingClient.delete(`/contas/receber/${id}`);
-    logger.debug('Conta a receber excluída com sucesso');
-  } catch (error) {
-    return handleApiError(error, 'excluirContaReceber', { id });
-  }
+  }, 'excluirContaReceber');
 }
 
-/**
- * Baixa (recebe) uma conta a receber
- */
 export async function baixarContaReceber(id: number | string, payload: any): Promise<any> {
-  try {
-    logger.debug('Baixando conta a receber', id, payload);
+  logger.debug('Baixando conta a receber', { id, payload });
+  return withTokenRefresh(async () => {
     const response = await blingClient.post(`/contas/receber/${id}/baixar`, payload);
     return response.data;
-  } catch (error) {
-    return handleApiError(error, 'baixarContaReceber', { id, payload });
-  }
+  }, 'baixarContaReceber');
 }
-
-/**
- * Função auxiliar para tratamento de erros da API
- */
-async function handleApiError(error: unknown, funcName: string, params: any): Promise<any> {
-  if (axios.isAxiosError(error) && error.response?.status === 401) {
-    logger.debug(`Token expirado (401) em ${funcName}, tentando renovar...`);
-    try {
-      await renovarToken();
-      if (funcName === 'listarContasReceber') return listarContasReceber(params as ListarContasReceberParams);
-      if (funcName === 'obterContaReceber') return obterContaReceber(params.id);
-      if (funcName === 'criarContaReceber') return criarContaReceber(params);
-      if (funcName === 'atualizarContaReceber') return atualizarContaReceber(params.id, params.conta);
-      if (funcName === 'excluirContaReceber') return excluirContaReceber(params.id);
-      if (funcName === 'baixarContaReceber') return baixarContaReceber(params.id, params.payload);
-      throw new Error(`Função desconhecida: ${funcName}`);
-    } catch (renewError) {
-      logger.error(`Erro ao renovar token em ${funcName}:`, renewError);
-      throw new Error(`Falha na renovação do token: ${renewError instanceof Error ? renewError.message : 'Erro desconhecido'}`);
-    }
-  }
-  if (axios.isAxiosError(error)) {
-    logger.error(`Erro em ${funcName}:`);
-    logger.error('Status:', error.response?.status);
-    logger.error('Data:', JSON.stringify(error.response?.data, null, 2));
-    throw new Error(`Erro ao ${funcName}: ${error.response?.data?.message || error.message}`);
-  }
-  logger.error(`Erro não relacionado ao Axios em ${funcName}:`, error);
-  throw error;
-} 

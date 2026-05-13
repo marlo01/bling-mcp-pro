@@ -29,6 +29,9 @@ const SENSITIVE_KEYS = [
   'password', 'senha', 'secret', 'client_secret', 'clientSecret',
   'apiKey', 'api_key', 'bearer', 'cpf', 'cnpj', 'rg',
   'cartao', 'cartaoCredito', 'numeroCartao', 'cvv',
+  // PII adicional comum em respostas do Bling
+  'email', 'telefone', 'celular', 'cpfCnpj', 'numeroDocumento',
+  'dataNascimento', 'endereco', 'cep', 'inscricaoEstadual',
 ];
 
 const SENSITIVE_PATTERNS = [

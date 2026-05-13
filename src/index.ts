@@ -1,10 +1,9 @@
 import { mcp } from './server.js';
+import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 
-const TRANSPORT = (process.env.MCP_TRANSPORT || 'stdio').toLowerCase();
-
 async function startServer(): Promise<void> {
-  if (TRANSPORT === 'sse' || TRANSPORT === 'http') {
+  if (config.mcpTransport === 'sse' || config.mcpTransport === 'http') {
     const port = parseInt(process.env.MCP_PORT || '4545', 10);
     const endpoint = process.env.MCP_ENDPOINT || '/sse';
 
@@ -27,7 +26,6 @@ startServer().catch((error) => {
   process.exit(1);
 });
 
-// Encerramento limpo
 process.on('SIGINT', () => {
   logger.info('Recebido SIGINT, encerrando...');
   process.exit(0);
