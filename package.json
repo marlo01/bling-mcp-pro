@@ -1,0 +1,51 @@
+{
+  "name": "bling-mcp-pro",
+  "version": "2.0.0",
+  "description": "Servidor MCP open source para integração segura com a API do Bling ERP. Fork hardened do bling-mcp original com logs sanitizados, rate limiting, validação reforçada e suporte HTTP/SSE.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "bling-mcp-pro": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "inspect": "npx fastmcp inspect src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "bling",
+    "erp",
+    "claude",
+    "anthropic",
+    "model-context-protocol",
+    "api",
+    "open-source",
+    "typescript",
+    "brazil"
+  ],
+  "author": "Contribuidores do bling-mcp-pro",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marlo01/bling-mcp-pro"
+  },
+  "bugs": {
+    "url": "https://github.com/marlo01/bling-mcp-pro/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "dotenv": "^16.5.0",
+    "fastmcp": "^1.21.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3"
+  }
+}

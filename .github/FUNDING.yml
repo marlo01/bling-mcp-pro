@@ -1,0 +1,14 @@
+# Configuração de patrocínio do GitHub
+# Quando configurado, aparece o botão "Sponsor" no topo do repositório
+
+# Descomente e preencha conforme suas contas:
+
+github: [marlo01]
+# patreon: seu-usuario-patreon
+# ko_fi: seu-usuario-kofi
+# buy_me_a_coffee: seu-usuario
+# custom: ['https://seu-link-de-pix-ou-stripe.com']
+
+# Para doação via PIX (Brasil), recomendo usar:
+# 1. Crie uma página simples no Notion/Linktree com seu QR Code Pix
+# 2. Adicione o link em custom: ['https://seu-linktree.com']
